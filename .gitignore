@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# Local env files
+.env
+
+# Uploads directory (temporary files only)
+uploads/
+
+# Debug logs
+npm-debug.log*
+*.stackdump
+grep.exe.stackdump
