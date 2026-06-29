@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      dbName: 'enterprise_chat'
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 
     // Drop legacy settings key_1 index if it exists
