@@ -209,6 +209,10 @@ export const addSubscriber = async (req, res) => {
       .populate('creator', 'firstName lastName username')
       .populate('subscribers', 'firstName lastName username email profilePhoto');
 
+    if (io) {
+      io.to(userId).emit('channel-created', updated);
+    }
+
     res.status(200).json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });
