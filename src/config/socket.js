@@ -52,6 +52,15 @@ export const initSocket = (server) => {
         await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
         // Broadcast user status change
         io.emit('user-status-change', { userId, isOnline: true });
+
+        // Query unread count and emit notifications-sync event
+        const Notification = (await import('../models/Notification.js')).default;
+        const unreadCount = await Notification.countDocuments({
+          recipient: userId,
+          readStatus: false,
+          deleted: { $ne: true }
+        });
+        socket.emit('notifications-sync', { unreadCount });
       } catch (error) {
         console.error('Error updating user-online:', error);
       }

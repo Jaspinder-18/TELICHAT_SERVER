@@ -22,6 +22,13 @@ import channelRoutes from './routes/channelRoutes.js';
 import botRoutes from './routes/botRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import taskRoutes from './routes/taskRoutes.js';
+import approvalRoutes from './routes/approvalRoutes.js';
+import workflowRoutes from './routes/workflowRoutes.js';
+import kbRoutes from './routes/kbRoutes.js';
+import productivityRoutes from './routes/productivityRoutes.js';
 
 // Initialize env
 dotenv.config();
@@ -64,6 +71,13 @@ app.use('/api/channel', channelRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/file', fileRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/task', taskRoutes);
+app.use('/api/approval', approvalRoutes);
+app.use('/api/workflow', workflowRoutes);
+app.use('/api/kb', kbRoutes);
+app.use('/api/productivity', productivityRoutes);
 
 // Test endpoint
 app.get('/', (req, res) => {

@@ -1,6 +1,7 @@
 import Bot from '../models/Bot.js';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
+import aiService from '../services/aiService.js';
 import File from '../models/File.js';
 import Group from '../models/Group.js';
 import Channel from '../models/Channel.js';
@@ -473,20 +474,16 @@ export const handleBotAutoReply = async (message) => {
   }
 };
 
-// Simple pattern-based intelligent AI responses
+// Intelligent AI responses powered by Gemini API
 const getAIAssistantResponse = async (userPrompt) => {
-  const prompt = userPrompt.toLowerCase();
-  if (prompt.includes('hello') || prompt.includes('hi')) {
-    return "Hello! I am your AI Assistant. How can I help you today?";
+  try {
+    const reply = await aiService.generateText(
+      userPrompt,
+      'You are a helpful, professional, and intelligent AI Assistant integrated inside an enterprise collaboration chat workspace. Answer briefly, precisely, and maintain corporate context.'
+    );
+    return reply;
+  } catch (error) {
+    console.error('[AI Assistant Error]', error.message);
+    return `AI Assistant Service is temporarily busy: ${error.message}`;
   }
-  if (prompt.includes('help')) {
-    return "I can answer general questions, draft emails, translate text, write code snippets, or schedule events. What do you need?";
-  }
-  if (prompt.includes('status') || prompt.includes('project')) {
-    return "According to our office records, project sprint tasks are currently 78% complete. Standard deployment is scheduled for Friday.";
-  }
-  if (prompt.includes('joke')) {
-    return "Why don't programmers like nature? It has too many bugs!";
-  }
-  return `Thank you for your prompt: "${userPrompt}". I have analyzed this request. Let me know if you need specific office documentation or assistance with this!`;
 };

@@ -20,6 +20,11 @@ const fileSchema = new mongoose.Schema(
     ],
     downloadsCount: { type: Number, default: 0 },
     isDeleted: { type: Boolean, default: false },
+    // AI File Intelligence fields
+    aiSummary: { type: String, default: '' },
+    aiTags: [{ type: String }],
+    isConfidential: { type: Boolean, default: false },
+    aiInsights: { type: String, default: '' }
   },
   { timestamps: true }
 );

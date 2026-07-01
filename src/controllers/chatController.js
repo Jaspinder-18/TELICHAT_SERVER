@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import File from '../models/File.js';
 import { io } from '../config/socket.js';
 import { handleBotAutoReply } from './botController.js';
+import workflowService from '../services/workflowService.js';
 
 // Get contacts (other active users in organization)
 export const getContacts = async (req, res) => {
@@ -90,6 +91,9 @@ export const sendMessage = async (req, res) => {
 
     // Trigger Bot Auto-Replies asynchronously
     handleBotAutoReply(message).catch(err => console.error("Error running bot auto-reply:", err));
+
+    // Trigger AI Chat-to-Workflow task detector
+    workflowService.scanMessageForTasks(message).catch(err => console.error("Error scanning message for tasks:", err));
 
     res.status(201).json(message);
   } catch (error) {

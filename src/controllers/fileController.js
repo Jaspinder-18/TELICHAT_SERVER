@@ -1,6 +1,7 @@
 import File from '../models/File.js';
 import Message from '../models/Message.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
+import fileParser from '../utils/fileParser.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -20,6 +21,9 @@ export const uploadFile = async (req, res) => {
       isDeleted: false,
     });
 
+    const tempPath = req.file.path;
+    const extractedText = await fileParser.extractText(tempPath, mimetype);
+
     if (existingFile) {
       // Create new version
       const oldVersion = {
@@ -38,6 +42,10 @@ export const uploadFile = async (req, res) => {
       existingFile.mimeType = mimetype;
 
       await existingFile.save();
+
+      // Trigger AI File summary & tag generation
+      fileParser.analyzeTextAndSave(existingFile._id, extractedText).catch(e => console.error(e));
+
       return res.status(200).json(existingFile);
     }
 
@@ -53,6 +61,10 @@ export const uploadFile = async (req, res) => {
     });
 
     await file.save();
+
+    // Trigger AI File summary & tag generation
+    fileParser.analyzeTextAndSave(file._id, extractedText).catch(e => console.error(e));
+
     res.status(201).json(file);
   } catch (error) {
     res.status(500).json({ message: error.message });

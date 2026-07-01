@@ -46,6 +46,29 @@ const userSchema = new mongoose.Schema(
     // Refresh Tokens for sessions
     refreshTokens: [{ type: String }],
     
+    // Enterprise Notification fields
+    notificationSettings: {
+      enabled: { type: Boolean, default: true },
+      desktop: { type: Boolean, default: true },
+      sound: { type: Boolean, default: true },
+      quietHoursStart: { type: String, default: '22:00' },
+      quietHoursEnd: { type: String, default: '07:00' },
+      customSound: { type: String, default: 'default' },
+      dnd: { type: Boolean, default: false },
+      mentionOnly: { type: Boolean, default: false }
+    },
+    pushSubscriptions: [
+      {
+        endpoint: { type: String, required: true },
+        expirationTime: { type: Number },
+        keys: {
+          p256dh: { type: String, required: true },
+          auth: { type: String, required: true }
+        }
+      }
+    ],
+    deviceTokens: [{ type: String }],
+
     isOnline: { type: Boolean, default: false },
     lastSeen: { type: Date, default: Date.now }
   },
