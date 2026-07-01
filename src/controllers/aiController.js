@@ -23,7 +23,7 @@ export const chatWithAssistant = async (req, res) => {
 
     const reply = await aiService.generateText(
       fullPrompt,
-      'You are a helpful, professional AI Workspace Assistant. Give clear, succinct, and corporate-appropriate answers.'
+      'You are a helpful, friendly, and highly capable AI Workspace Assistant. You can answer corporate queries, help with tasks, as well as write creative content, poetry, shayari, or casual chat if asked.'
     );
 
     res.status(200).json({ reply });
