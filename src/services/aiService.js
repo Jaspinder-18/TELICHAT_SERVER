@@ -42,7 +42,11 @@ class AIService {
       throw new Error('Invalid response structure from Gemini API');
     } catch (error) {
       console.error('[GEMINI API ERROR]', error.response?.data || error.message);
-      throw new Error(error.response?.data?.error?.message || error.message);
+      const errMsg = error.response?.data?.error?.message || error.message;
+      if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('rate limit') || error.response?.status === 429) {
+        throw new Error('AI Assistant is currently busy. Please wait a moment and try again.');
+      }
+      throw new Error(errMsg);
     }
   }
 
