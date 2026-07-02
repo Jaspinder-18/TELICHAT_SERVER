@@ -53,7 +53,6 @@ export const createGroup = async (req, res) => {
   }
 };
 
-// Get user's groups (includes joined groups and all public groups)
 export const getMyGroups = async (req, res) => {
   try {
     const groups = await Group.find({
@@ -65,7 +64,17 @@ export const getMyGroups = async (req, res) => {
       .populate('members.user', 'firstName lastName username email profilePhoto isOnline')
       .populate('owner', 'firstName lastName username')
       .sort({ updatedAt: -1 });
-    res.status(200).json(groups);
+
+    const groupsWithUnread = await Promise.all(groups.map(async (g) => {
+      const count = await Message.countDocuments({
+        recipientGroup: g._id,
+        sender: { $ne: req.user._id },
+        seenBy: { $ne: req.user._id }
+      });
+      return { ...g.toObject(), unreadCount: count };
+    }));
+
+    res.status(200).json(groupsWithUnread);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

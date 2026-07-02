@@ -91,6 +91,38 @@ export const initSocket = (server) => {
       }
     });
 
+    // Real-time message seen / read receipts
+    socket.on('mark-as-seen', async ({ messageId, senderId }) => {
+      try {
+        if (!socket.userId) return;
+        const Message = (await import('../models/Message.js')).default;
+        const msg = await Message.findByIdAndUpdate(
+          messageId,
+          { $set: { status: 'seen' }, $addToSet: { seenBy: socket.userId } },
+          { new: true }
+        );
+        if (msg) {
+          io.to(senderId).emit('message-seen', { messageId, status: 'seen' });
+        }
+      } catch (error) {
+        console.error('Error in mark-as-seen socket event:', error);
+      }
+    });
+
+    socket.on('mark-all-seen', async ({ chatPartnerId }) => {
+      try {
+        if (!socket.userId) return;
+        const Message = (await import('../models/Message.js')).default;
+        await Message.updateMany(
+          { sender: chatPartnerId, recipientUser: socket.userId, recipientType: 'user', status: { $ne: 'seen' } },
+          { $set: { status: 'seen' }, $addToSet: { seenBy: socket.userId } }
+        );
+        io.to(chatPartnerId).emit('all-messages-seen', { viewerId: socket.userId });
+      } catch (error) {
+        console.error('Error in mark-all-seen socket event:', error);
+      }
+    });
+
     // Disconnect handling
     socket.on('disconnect', async () => {
       console.log(`Socket disconnected: ${socket.id}`);

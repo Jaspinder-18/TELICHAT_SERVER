@@ -34,7 +34,6 @@ export const createChannel = async (req, res) => {
   }
 };
 
-// Get channels (includes subscribed channels and all public channels)
 export const getMyChannels = async (req, res) => {
   try {
     const channels = await Channel.find({
@@ -46,7 +45,17 @@ export const getMyChannels = async (req, res) => {
       .populate('creator', 'firstName lastName username')
       .populate('subscribers', 'firstName lastName username email profilePhoto')
       .sort({ updatedAt: -1 });
-    res.status(200).json(channels);
+
+    const channelsWithUnread = await Promise.all(channels.map(async (c) => {
+      const count = await Message.countDocuments({
+        recipientChannel: c._id,
+        sender: { $ne: req.user._id },
+        seenBy: { $ne: req.user._id }
+      });
+      return { ...c.toObject(), unreadCount: count };
+    }));
+
+    res.status(200).json(channelsWithUnread);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

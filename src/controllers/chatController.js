@@ -5,13 +5,23 @@ import { io } from '../config/socket.js';
 import { handleBotAutoReply } from './botController.js';
 import workflowService from '../services/workflowService.js';
 
-// Get contacts (other active users in organization)
 export const getContacts = async (req, res) => {
   try {
     const contacts = await User.find({ _id: { $ne: req.user._id }, isVerified: true })
       .select('firstName lastName username email profilePhoto department employeeId isOnline lastSeen')
       .sort({ firstName: 1 });
-    res.status(200).json(contacts);
+
+    const contactsWithUnread = await Promise.all(contacts.map(async (c) => {
+      const count = await Message.countDocuments({
+        sender: c._id,
+        recipientUser: req.user._id,
+        recipientType: 'user',
+        status: { $ne: 'seen' }
+      });
+      return { ...c.toObject(), unreadCount: count };
+    }));
+
+    res.status(200).json(contactsWithUnread);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
