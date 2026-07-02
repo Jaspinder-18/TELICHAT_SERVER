@@ -164,8 +164,8 @@ export const processNotification = async (jobData) => {
     }
 
     // 2. Off-line / Background push routing (Web Push API)
-    if (!delivered && user.pushSubscriptions && user.pushSubscriptions.length > 0) {
-      console.log(`[Notification Service] User ${user.username} is offline. Routing via Web Push...`);
+    if (user.pushSubscriptions && user.pushSubscriptions.length > 0) {
+      console.log(`[Notification Service] Routing via Web Push for user ${user.username}...`);
       
       const failedSubs = [];
       for (const sub of user.pushSubscriptions) {
@@ -186,7 +186,7 @@ export const processNotification = async (jobData) => {
     }
 
     // 3. Android FCM Push routing
-    if (!delivered && user.deviceTokens && user.deviceTokens.length > 0) {
+    if (user.deviceTokens && user.deviceTokens.length > 0) {
       console.log(`[Notification Service] Routing to Android device tokens for ${user.username}...`);
       for (const token of user.deviceTokens) {
         const result = await sendAndroidPush(token, payload);
