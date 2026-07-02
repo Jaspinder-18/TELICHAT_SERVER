@@ -4,6 +4,7 @@ import File from '../models/File.js';
 import { io } from '../config/socket.js';
 import { handleBotAutoReply } from './botController.js';
 import workflowService from '../services/workflowService.js';
+import { sendFCMNotification } from '../utils/firebasePush.js';
 
 export const getContacts = async (req, res) => {
   try {
@@ -104,6 +105,34 @@ export const sendMessage = async (req, res) => {
 
     // Trigger AI Chat-to-Workflow task detector
     workflowService.scanMessageForTasks(message).catch(err => console.error("Error scanning message for tasks:", err));
+
+    // Trigger FCM for Mobile App Push Notifications
+    try {
+      const senderName = message.sender.firstName || `@${message.sender.username}`;
+      const msgBody = message.type === 'file' ? '📁 Sent a file' : message.content;
+      if (recipientType === 'user') {
+        const recipientUserDoc = await User.findById(recipientId);
+        if (recipientUserDoc && recipientUserDoc.deviceTokens && recipientUserDoc.deviceTokens.length > 0) {
+          sendFCMNotification(recipientUserDoc.deviceTokens, { title: senderName, body: msgBody });
+        }
+      } else if (recipientType === 'group') {
+        const Group = (await import('../models/Group.js')).default;
+        const group = await Group.findById(recipientId).populate('members.user');
+        if (group) {
+          const tokens = [];
+          group.members.forEach(m => {
+             if (m.user && m.user._id.toString() !== req.user._id.toString() && m.user.deviceTokens) {
+                 tokens.push(...m.user.deviceTokens);
+             }
+          });
+          if (tokens.length > 0) {
+             sendFCMNotification(tokens, { title: `${senderName} in ${group.name}`, body: msgBody });
+          }
+        }
+      }
+    } catch (pushErr) {
+      console.error('[FCM] Push Notification dispatch error:', pushErr);
+    }
 
     res.status(201).json(message);
   } catch (error) {

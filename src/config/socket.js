@@ -6,7 +6,7 @@ export let io;
 
 // Map to track active socket connections by User ID
 // Key: userId string, Value: Set of socketIds (to support multiple tabs/devices)
-const activeUsers = new Map();
+export const activeUsers = new Map();
 
 export const initSocket = (server) => {
   const allowedOrigins = [
