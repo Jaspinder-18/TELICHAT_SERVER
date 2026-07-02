@@ -113,7 +113,15 @@ export const sendMessage = async (req, res) => {
       if (recipientType === 'user') {
         const recipientUserDoc = await User.findById(recipientId);
         if (recipientUserDoc && recipientUserDoc.deviceTokens && recipientUserDoc.deviceTokens.length > 0) {
-          sendFCMNotification(recipientUserDoc.deviceTokens, { title: senderName, body: msgBody });
+          sendFCMNotification(recipientUserDoc.deviceTokens, {
+            title: senderName,
+            body: msgBody,
+            data: {
+              chatId: message.sender._id.toString(),
+              chatType: 'user',
+              messageId: message._id.toString()
+            }
+          });
         }
       } else if (recipientType === 'group') {
         const Group = (await import('../models/Group.js')).default;
@@ -126,7 +134,15 @@ export const sendMessage = async (req, res) => {
              }
           });
           if (tokens.length > 0) {
-             sendFCMNotification(tokens, { title: `${senderName} in ${group.name}`, body: msgBody });
+             sendFCMNotification(tokens, {
+                title: `${senderName} in ${group.name}`,
+                body: msgBody,
+                data: {
+                  chatId: group._id.toString(),
+                  chatType: 'group',
+                  messageId: message._id.toString()
+                }
+             });
           }
         }
       }
@@ -385,6 +401,37 @@ export const getStarredMessages = async (req, res) => {
       .populate('file')
       .sort({ createdAt: -1 });
     res.status(200).json(starred);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Mark a specific chat (direct or group) as seen/read
+export const markChatAsSeen = async (req, res) => {
+  try {
+    const { chatId, chatType } = req.body;
+    if (!chatId) return res.status(400).json({ message: 'chatId is required' });
+
+    if (chatType === 'user') {
+      await Message.updateMany(
+        { sender: chatId, recipientUser: req.user._id, recipientType: 'user', status: { $ne: 'seen' } },
+        { $set: { status: 'seen' }, $addToSet: { seenBy: req.user._id } }
+      );
+    } else if (chatType === 'group') {
+      await Message.updateMany(
+        { recipientGroup: chatId, recipientType: 'group', seenBy: { $ne: req.user._id } },
+        { $addToSet: { seenBy: req.user._id } }
+      );
+    }
+
+    // Also mark associated notification records as read
+    const Notification = (await import('../models/Notification.js')).default;
+    await Notification.updateMany(
+      { recipient: req.user._id, relatedId: chatId, readStatus: false },
+      { $set: { readStatus: true, seenStatus: true } }
+    );
+
+    res.status(200).json({ message: 'Chat marked as seen successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

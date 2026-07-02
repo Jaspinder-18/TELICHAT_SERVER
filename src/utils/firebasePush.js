@@ -4,11 +4,16 @@ export const sendFCMNotification = async (deviceTokens, payload) => {
   if (!admin || !deviceTokens || deviceTokens.length === 0) return;
   
   const message = {
-    notification: {
-      title: payload.title,
-      body: payload.body,
+    data: {
+      title: payload.title || '',
+      body: payload.body || '',
+      chatId: payload.data?.chatId || '',
+      chatType: payload.data?.chatType || '',
+      messageId: payload.data?.messageId || '',
     },
-    data: payload.data || {},
+    android: {
+      priority: 'high',
+    },
     tokens: deviceTokens,
   };
 
