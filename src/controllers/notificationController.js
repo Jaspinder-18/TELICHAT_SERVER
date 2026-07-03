@@ -276,6 +276,9 @@ export const registerDeviceToken = async (req, res) => {
     if (!token) return res.status(400).json({ message: 'Device token is required' });
 
     const user = await User.findById(req.user._id);
+    if (!user.deviceTokens) {
+      user.deviceTokens = [];
+    }
     if (!user.deviceTokens.includes(token)) {
       user.deviceTokens.push(token);
       await user.save();
