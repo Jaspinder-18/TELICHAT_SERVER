@@ -19,6 +19,16 @@ import { verifyToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
+router.get('/debug-tokens', async (req, res) => {
+  try {
+    const User = (await import('../models/User.js')).default;
+    const users = await User.find({}, 'username email deviceTokens');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Apply auth protection to all endpoints
 router.use(verifyToken);
 
