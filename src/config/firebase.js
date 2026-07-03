@@ -1,10 +1,13 @@
-import admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+let messagingInstance = null;
 
 try {
   let serviceAccount;
@@ -21,9 +24,10 @@ try {
   }
 
   if (serviceAccount) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+    const app = initializeApp({
+      credential: cert(serviceAccount)
     });
+    messagingInstance = getMessaging(app);
     console.log('[Firebase] Admin SDK initialized successfully');
   } else {
     console.warn('[Firebase] Warning: Service account key not found. Please set FIREBASE_SERVICE_ACCOUNT in Render Env.');
@@ -32,4 +36,4 @@ try {
   console.error('[Firebase] Failed to initialize Admin SDK:', error);
 }
 
-export default admin;
+export const messaging = messagingInstance;

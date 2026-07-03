@@ -1,7 +1,10 @@
-import admin from '../config/firebase.js';
+import { messaging } from '../config/firebase.js';
 
 export const sendFCMNotification = async (deviceTokens, payload) => {
-  if (!admin || !deviceTokens || deviceTokens.length === 0) return;
+  if (!messaging || !deviceTokens || deviceTokens.length === 0) {
+    console.warn('[FCM] Skipping push: messaging not initialized or no tokens');
+    return;
+  }
   
   const message = {
     data: {
@@ -18,11 +21,11 @@ export const sendFCMNotification = async (deviceTokens, payload) => {
   };
 
   try {
-    const response = await admin.messaging().sendEachForMulticast(message);
+    const response = await messaging.sendEachForMulticast(message);
     if (response.failureCount > 0) {
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
-          console.error(`[FCM] Token failure for token ${deviceTokens[idx]}: ${resp.error}`);
+          console.error(`[FCM] Token failure for token ${deviceTokens[idx]}: ${resp.error.message}`);
         }
       });
     }
