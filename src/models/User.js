@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema(
     gender: { type: String, enum: ['male', 'female', 'other'], default: 'other' },
     department: { type: String, default: 'General', trim: true },
     employeeId: { type: String, default: 'EMP-TEMP', trim: true },
-    password: { type: String, required: true },
+    password: { type: String, required: function() { return this.provider === 'email'; } },
     profilePhoto: { type: String, default: '' },
     
     // Auth & Status fields
@@ -70,7 +70,11 @@ const userSchema = new mongoose.Schema(
     deviceTokens: [{ type: String }],
 
     isOnline: { type: Boolean, default: false },
-    lastSeen: { type: Date, default: Date.now }
+    lastSeen: { type: Date, default: Date.now },
+    
+    // Google Auth fields
+    googleId: { type: String, default: null },
+    provider: { type: String, enum: ['email', 'google'], default: 'email' }
   },
   { timestamps: true }
 );
@@ -83,7 +87,7 @@ userSchema.virtual('fullName').get(function() {
 
 // Document middleware: Hash password before saving if modified
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

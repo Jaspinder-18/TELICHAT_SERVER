@@ -6,6 +6,7 @@ import { generateAccessToken, generateRefreshToken } from '../middlewares/authMi
 import { logAudit } from '../utils/logger.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import jwt from 'jsonwebtoken';
+import { verifyGoogleToken } from '../services/googleAuthService.js';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_TIME_MS = 15 * 60 * 1000; // 15 minutes
@@ -524,5 +525,134 @@ export const updateProfile = async (req, res) => {
   } catch (error) {
     console.error('[ERROR] in updateProfile:', error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ message: 'Google ID Token is required' });
+    }
+
+    const profile = await verifyGoogleToken(idToken);
+    
+    // 1. Look up user by googleId
+    let user = await User.findOne({ googleId: profile.googleId });
+
+    if (!user) {
+      // 2. Look up user by email to handle linking
+      user = await User.findOne({ email: profile.email.toLowerCase() });
+
+      if (user) {
+        // Link Google ID to existing account
+        user.googleId = profile.googleId;
+        user.isVerified = true; // Auto-verify email since Google verified it
+        user.provider = 'google';
+        if (!user.profilePhoto && profile.picture) {
+          user.profilePhoto = profile.picture;
+        }
+        await user.save();
+        
+        await logAudit({
+          user: user._id,
+          action: 'USER_GOOGLE_LINK_SUCCESS',
+          req,
+          details: { email: user.email, googleId: profile.googleId },
+        });
+      } else {
+        // 3. New User Registration
+        // Derive username from email prefix
+        const emailPrefix = profile.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+        let username = emailPrefix;
+        
+        // Handle potential username collision
+        let collisionUser = await User.findOne({ username });
+        while (collisionUser) {
+          const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+          username = `${emailPrefix}${randomSuffix}`;
+          collisionUser = await User.findOne({ username });
+        }
+
+        // Split name into first and last
+        const nameParts = profile.name ? profile.name.split(' ') : [''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        user = new User({
+          firstName,
+          lastName,
+          username,
+          email: profile.email.toLowerCase(),
+          googleId: profile.googleId,
+          provider: 'google',
+          isVerified: true,
+          profilePhoto: profile.picture || '',
+          failedAttempts: 0,
+          isOnline: true,
+          lastSeen: new Date(),
+        });
+
+        await user.save();
+
+        // Initialize default Settings for the Google user
+        const defaultSettings = new Settings({ user: user._id });
+        await defaultSettings.save();
+
+        await logAudit({
+          user: user._id,
+          action: 'USER_GOOGLE_REGISTER_SUCCESS',
+          req,
+          details: { email: user.email, username },
+        });
+      }
+    } else {
+      // Existing Google user login: update last login details
+      user.isOnline = true;
+      user.lastSeen = new Date();
+      await user.save();
+
+      await logAudit({
+        user: user._id,
+        action: 'USER_GOOGLE_LOGIN_SUCCESS',
+        req,
+        details: { email: user.email, googleId: profile.googleId },
+      });
+    }
+
+    // Check if account status is banned/suspended
+    if (user.status === 'suspended' || user.status === 'banned') {
+      return res.status(403).json({ message: 'Your account has been suspended or banned.' });
+    }
+
+    // Success login: generate standard access and refresh tokens
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshTokens.push(refreshToken);
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens.shift();
+    }
+    await user.save();
+
+    res.status(200).json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`,
+        username: user.username,
+        email: user.email,
+        profilePhoto: user.profilePhoto,
+        role: user.role,
+        department: user.department,
+        employeeId: user.employeeId
+      },
+    });
+  } catch (error) {
+    console.error('[ERROR] in googleLogin:', error);
+    res.status(500).json({ message: error.message || 'Authentication failed' });
   }
 };

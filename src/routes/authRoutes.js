@@ -8,7 +8,8 @@ import {
   forgotPasswordRequest,
   verifyForgotPasswordOTP,
   resetPassword,
-  updateProfile
+  updateProfile,
+  googleLogin
 } from '../controllers/authController.js';
 import upload from '../middlewares/uploadMiddleware.js';
 import { authLimiter } from '../middlewares/securityMiddleware.js';
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post('/register', upload.single('profilePhoto'), register);
 router.post('/verify-email', verifyEmail);
 router.post('/login', authLimiter, login);
+router.post('/google', googleLogin);
 router.post('/logout', verifyToken, logout);
 router.post('/refresh-token', refreshToken);
 router.post('/forgot-password', forgotPasswordRequest);
